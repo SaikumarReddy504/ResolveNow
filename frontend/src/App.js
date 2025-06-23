@@ -12,29 +12,32 @@ import AgentHome from "./components/agent/AgentHome";
 import UserInfo from "./components/admin/UserInfo";
 import Home from "./components/common/Home";
 import AgentInfo from "./components/admin/AgentInfo";
+import About from "./components/common/About"; 
 
 function App() {
   const isLoggedIn = !!localStorage.getItem("user");
+
   return (
     <div className="App">
       <Router>
         <Routes>
           <Route exact path="/" element={<Home />} />
-          <Route path="/Login" element={<Login />} />
-          <Route path="/SignUp" element={<SignUp />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/about" element={<About />} /> 
+
           {isLoggedIn ? (
             <>
-              <Route path="/AgentInfo" element={<AgentInfo />} />
-              <Route path="/AgentHome" element={<AgentHome />} />
-              <Route path="/UserInfo" element={<UserInfo />} />
-              <Route path="/AgentHome" element={<AgentHome />} />
-              <Route path="/AdminHome" element={<AdminHome />} />
-              <Route path="/Homepage" element={<HomePage />} />
-              <Route path="/Complaint" element={<Complaint />} />
-              <Route path="/Status" element={<Status />} />
+              <Route path="/agentinfo" element={<AgentInfo />} />
+              <Route path="/agenthome" element={<AgentHome />} />
+              <Route path="/userinfo" element={<UserInfo />} />
+              <Route path="/adminhome" element={<AdminHome />} />
+              <Route path="/homepage" element={<HomePage />} />
+              <Route path="/complaint" element={<Complaint />} />
+              <Route path="/status" element={<Status />} />
             </>
           ) : (
-            <Route to="/Login" />
+            <Route path="/login" element={<Login />} /> // fallback for unauthenticated
           )}
         </Routes>
       </Router>

@@ -1,95 +1,72 @@
 import React, { useEffect, useState } from 'react';
-import Button from 'react-bootstrap/Button';
-import Container from 'react-bootstrap/Container';
-import Nav from 'react-bootstrap/Nav';
-import Navbar from 'react-bootstrap/Navbar';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Button, Container, Nav, Navbar } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
 import UserInfo from './UserInfo';
-import AccordionAdmin from "./AccordionAdmin";
+import AccordionAdmin from './AccordionAdmin';
 import AgentInfo from './AgentInfo';
 
 const AdminHome = () => {
-   const navigate = useNavigate();
-   const [activeComponent, setActiveComponent] = useState('dashboard');
+  const navigate = useNavigate();
+  const [activeComponent, setActiveComponent] = useState('dashboard');
+  const [userName, setUserName] = useState('');
 
-   const [userName, setUserName] = useState('');
-
-
-   useEffect(() => {
-      const getData = async () => {
-         try {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (user) {
-               const { name } = user;
-               setUserName(name);
-            } else {
-               navigate('/');
-            }
-         } catch (error) {
-            console.log(error);
-         }
-      };
-      getData();
-   }, [navigate]);
-
-
-
-   const handleNavLinkClick = (componentName) => {
-      setActiveComponent(componentName);
-   };
-
-   const LogOut = () => {
-      localStorage.removeItem('user');
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user?.name) {
+      setUserName(user.name);
+    } else {
       navigate('/');
-   };
+    }
+  }, [navigate]);
 
-   return (
-      <>
-         <Navbar className="text-white" bg="dark" expand="lg">
-            <Container fluid>
-               <Navbar.Brand className="text-white" href="#">
-                  Hi Admin {userName}
-               </Navbar.Brand>
-               <Navbar.Toggle aria-controls="navbarScroll" />
-               <Navbar.Collapse id="navbarScroll">
-                  <Nav className="text-white me-auto my-2 my-lg-0" style={{ maxHeight: '100px' }} navbarScroll>
-                     <NavLink
-                        className={`nav-link text-light ${activeComponent === 'dashboard' ? 'active' : ''}`}
-                        onClick={() => handleNavLinkClick('dashboard')}
-                     >
-                        Dashboard
-                     </NavLink>
-                     <NavLink
-                        className={`nav-link text-light ${activeComponent === 'UserInfo' ? 'active' : ''}`}
-                        onClick={() => handleNavLinkClick('UserInfo')}
-                     >
-                        User
-                     </NavLink>
-                     <NavLink
-                        className={`nav-link text-light ${activeComponent === 'Agent' ? 'active' : ''}`}
-                        onClick={() => handleNavLinkClick('Agent')}
-                     >
-                        Agent
-                     </NavLink>
-                  </Nav>
-                  <Button onClick={LogOut} variant="outline-danger">
-                     Log out
-                  </Button>
-               </Navbar.Collapse>
-            </Container>
-         </Navbar>
-         <div className="content">
-            {activeComponent === 'Agent' ? <AgentInfo /> : null}
-            {activeComponent === 'dashboard' ? <AccordionAdmin /> : null}
-            {activeComponent === 'UserInfo' ? <UserInfo /> : null}
-         </div>
-      </>
-   )
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/');
+  };
 
+  const componentsMap = {
+    dashboard: <AccordionAdmin />,
+    UserInfo: <UserInfo />,
+    Agent: <AgentInfo />,
+  };
 
+  const navTabs = [
+    { key: 'dashboard', label: '📊 Dashboard' },
+    { key: 'UserInfo', label: '👤 Users' },
+    { key: 'Agent', label: '🧑‍🔧 Agents' },
+  ];
+
+  return (
+    <>
+      <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
+        <Container fluid>
+          <Navbar.Brand className="fw-bold">👋 Hi Admin, {userName}</Navbar.Brand>
+          <Navbar.Toggle aria-controls="admin-navbar" />
+          <Navbar.Collapse id="admin-navbar">
+            <Nav className="me-auto">
+              {navTabs.map((tab) => (
+                <Nav.Link
+                  key={tab.key}
+                  onClick={() => setActiveComponent(tab.key)}
+                  className={activeComponent === tab.key ? 'fw-bold text-warning' : 'text-light'}
+                >
+                  {tab.label}
+                </Nav.Link>
+              ))}
+            </Nav>
+            <Button variant="outline-danger" onClick={handleLogout}>
+              🔒 Log Out
+            </Button>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+
+      <main className="container my-4">
+        {componentsMap[activeComponent] || <p>Component not found.</p>}
+      </main>
+    </>
+  );
 };
 
 export default AdminHome;
-
-

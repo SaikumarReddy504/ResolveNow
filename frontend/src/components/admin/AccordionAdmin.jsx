@@ -1,136 +1,134 @@
-import React, { useState, useEffect } from 'react'
-import Accordion from 'react-bootstrap/Accordion';
-import Card from 'react-bootstrap/Card';
-import Dropdown from 'react-bootstrap/Dropdown';
-import Alert from 'react-bootstrap/Alert';
-import Footer from '../common/FooterC'
+import React, { useEffect, useState } from 'react';
+import { Accordion, Card, Dropdown, Alert, Badge, Spinner } from 'react-bootstrap';
 import axios from 'axios';
+import Footer from '../common/FooterC';
 
 const AccordionAdmin = () => {
   const [complaintList, setComplaintList] = useState([]);
   const [agentList, setAgentList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const getComplaints = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/status');
-        const complaints = response.data;
-        setComplaintList(complaints);
+        const [complaintsRes, agentsRes] = await Promise.all([
+          axios.get('http://localhost:8000/status'),
+          axios.get('http://localhost:8000/AgentUsers')
+        ]);
+        setComplaintList(complaintsRes.data || []);
+        setAgentList(agentsRes.data || []);
       } catch (error) {
-        console.log(error);
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
-    getComplaints();
-
-    const getAgentsRecords = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/AgentUsers');
-        const agents = response.data;
-        setAgentList(agents);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    getAgentsRecords();
-
+    fetchData();
   }, []);
 
-  const handleSelection = async (agentId, complaintId, status, agentName) => {
+  const handleAssign = async (agentId, complaintId, status, agentName) => {
     try {
-      await axios.get(`http://localhost:8000/AgentUsers/${agentId}`);
-      const assignedComplaint = {
-        agentId,
-        complaintId,
-        status,
-        agentName,
-      };
-
+      const assignedComplaint = { agentId, complaintId, status, agentName };
       await axios.post('http://localhost:8000/assignedComplaints', assignedComplaint);
-      const updatedComplaintList = complaintList.filter((complaint) => complaint.id !== complaintId);
-      setComplaintList(updatedComplaintList);
-      alert(`Compliant assigned to the Agent ${agentName}`)
-    } catch (error) {
-      console.log(error);
+
+      // Update complaint list UI
+      setComplaintList(prev => prev.filter(c => c._id !== complaintId));
+
+      alert(`✅ Complaint assigned to Agent: ${agentName}`);
+    } catch (err) {
+      console.error("Assignment error:", err);
+      alert("❌ Assignment failed. Try again.");
     }
   };
 
-  return (
-    <div>
-      <Accordion className='accordian' alwaysOpen>
-        <Accordion.Item eventKey="0">
-          <Accordion.Header>Users Complaints</Accordion.Header>
-          <Accordion.Body style={{background:'aliceblue'}}>
-            <div style={{ display: "flex", flexWrap: "wrap", margin: "20px" }}>
-              {complaintList.length > 0 ? (
-                complaintList.map((complaint, index) => (
-                  <Card key={index} style={{ width: '15rem', margin: '0 10px 15px 0' }}>
-                    <Card.Body style={{textAlign:'center'}}>
-                      <Card.Title>Name: {complaint.name}</Card.Title>
-                      <div style={{fontSize:'14px',marginTop: '20px'}}>
-                        <Card.Text>Address: {complaint.address}</Card.Text>
-                        <Card.Text>City: {complaint.city}</Card.Text>
-                        <Card.Text>State: {complaint.state}</Card.Text>
-                        <Card.Text>Pincode: {complaint.pincode}</Card.Text>
-                        <Card.Text>Comment: {complaint.comment}</Card.Text>
-                        <Card.Text>Status: {complaint.status}</Card.Text>
-                      </div>
-                      {(complaint.status === "completed") ?
-                        <></>
-                        : <Dropdown className='mt-2'>
-                          <Dropdown.Toggle variant="warning" id="dropdown-basic">
-                            Assign
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu>
-                            {
-                              agentList.map((agent, index) => {
-                                return (
-                                  <Dropdown.Item key={index} onClick={() => handleSelection(agent._id, complaint._id, complaint.status, agent.name)}>{agent.name}</Dropdown.Item>
+  const renderComplaintCard = (complaint) => (
+    <Card key={complaint._id} className="m-2 shadow-sm" style={{ width: '17rem' }}>
+      <Card.Body className="text-center">
+        <Card.Title className="fw-bold text-primary">{complaint.name}</Card.Title>
+        <div className="text-start mt-3" style={{ fontSize: '14px' }}>
+          <Card.Text><strong>📍</strong> {complaint.address}, {complaint.city}, {complaint.state}</Card.Text>
+          <Card.Text><strong>📮 Pincode:</strong> {complaint.pincode}</Card.Text>
+          <Card.Text><strong>📝 Comment:</strong> {complaint.comment}</Card.Text>
+          <Card.Text>
+            <strong>Status:</strong>{' '}
+            <Badge bg={complaint.status === 'completed' ? 'success' : 'warning'}>
+              {complaint.status}
+            </Badge>
+          </Card.Text>
+        </div>
+        {complaint.status !== 'completed' && (
+          <Dropdown className="mt-3">
+            <Dropdown.Toggle variant="info" size="sm">Assign Agent</Dropdown.Toggle>
+            <Dropdown.Menu>
+              {agentList.map((agent) => (
+                <Dropdown.Item
+                  key={agent._id}
+                  onClick={() => handleAssign(agent._id, complaint._id, complaint.status, agent.name)}
+                >
+                  {agent.name}
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+        )}
+      </Card.Body>
+    </Card>
+  );
 
-                                )
-                              })
-                            }
-                          </Dropdown.Menu>
-                        </Dropdown>
-                      }
-                    </Card.Body>
-                  </Card>
-                ))
-              ) : (
-                <Alert variant="info">
-                  <Alert.Heading>No complaints to show</Alert.Heading>
-                </Alert>
-              )}
-            </div>
+  const renderAgentCard = (agent) => (
+    <Card key={agent._id} className="m-2 shadow-sm" style={{ width: '20rem' }}>
+      <Card.Body>
+        <Card.Title className="text-success">{agent.name}</Card.Title>
+        <Card.Text><strong>Email:</strong> {agent.email}</Card.Text>
+      </Card.Body>
+    </Card>
+  );
+
+  return (
+    <div className="container my-4">
+      <Accordion defaultActiveKey="0" alwaysOpen>
+        <Accordion.Item eventKey="0">
+          <Accordion.Header>📂 User Complaints</Accordion.Header>
+          <Accordion.Body style={{ background: 'aliceblue' }}>
+            {loading ? (
+              <div className="text-center my-4">
+                <Spinner animation="border" variant="primary" />
+                <p>Loading complaints...</p>
+              </div>
+            ) : (
+              <div className="d-flex flex-wrap justify-content-start">
+                {complaintList.length > 0
+                  ? complaintList.map(renderComplaintCard)
+                  : <Alert variant="info" className="w-100 text-center">No complaints to show</Alert>
+                }
+              </div>
+            )}
           </Accordion.Body>
         </Accordion.Item>
+
         <Accordion.Item eventKey="1">
-          <Accordion.Header>Agents</Accordion.Header>
-          <Accordion.Body style={{background:'aliceblue'}}>
-            <div style={{ display: "flex", flexWrap: "wrap", margin: "20px" }}>
-              {agentList.length > 0 ? (
-                agentList.map((agent, index) => (
-                  <Card key={index} style={{ width: '22rem', margin: '0 10px 15px 0' }}>
-                    <Card.Body>
-                      <Card.Title>Name: {agent.name}</Card.Title>
-                      <Card.Text>Email: {agent.email}</Card.Text>
-
-                    </Card.Body>
-                  </Card>
-                ))
-              ) : (
-                <Alert variant="info">
-                  <Alert.Heading>No Agents to show</Alert.Heading>
-                </Alert>
-              )}
-            </div>
-
+          <Accordion.Header>👷‍♂️ Available Agents</Accordion.Header>
+          <Accordion.Body style={{ background: 'aliceblue' }}>
+            {loading ? (
+              <div className="text-center my-4">
+                <Spinner animation="border" variant="secondary" />
+                <p>Loading agents...</p>
+              </div>
+            ) : (
+              <div className="d-flex flex-wrap justify-content-start">
+                {agentList.length > 0
+                  ? agentList.map(renderAgentCard)
+                  : <Alert variant="info" className="w-100 text-center">No agents available</Alert>
+                }
+              </div>
+            )}
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>
 
-      <Footer/>
-    </div >
-  )
-}
+      <Footer />
+    </div>
+  );
+};
 
-export default AccordionAdmin
-
+export default AccordionAdmin;

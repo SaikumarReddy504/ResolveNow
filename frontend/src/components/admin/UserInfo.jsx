@@ -1,148 +1,185 @@
 import React, { useEffect, useState } from 'react';
-import Button from 'react-bootstrap/Button';
+import {
+  Container,
+  Table,
+  Alert,
+  Button,
+  Collapse,
+  Form,
+} from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import Table from 'react-bootstrap/Table';
-import Alert from 'react-bootstrap/Alert';
-import { Container } from 'react-bootstrap';
-import Collapse from 'react-bootstrap/Collapse';
-import Form from 'react-bootstrap/Form';
-import Footer from '../common/FooterC'
-
+import Footer from '../common/FooterC';
 import axios from 'axios';
 
 const UserInfo = () => {
-   const navigate = useNavigate();
-   const [ordinaryList, setOrdinaryList] = useState([]);
-   const [toggle, setToggle] = useState({})
+  const navigate = useNavigate();
+  const [users, setUsers] = useState([]);
+  const [expandedUser, setExpandedUser] = useState(null);
+  const [formDataMap, setFormDataMap] = useState({});
 
-   // const [count, setCount] = useState(0)
-
-   const [updateUser, setUpdateUser] = useState({
-      name: '',
-      email: '',
-      phone: '',
-   })
-
-   const handleChange = (e) => {
-      setUpdateUser({ ...updateUser, [e.target.name]: e.target.value })
-   }
-
-   const handleSubmit = async (user_id) => {
-      if (updateUser === "") {
-         alert("atleast 1 fields need to be fill")
-      }
-      else {
-         window.confirm("Are you sure you want to Update the user?");
-         axios.put(`http://localhost:8000/user/${user_id}`, updateUser)
-            .then((res) => {
-               alert(`user updated successfully`)
-               JSON.stringify(res.data)
-            })
-            .catch((err) => {
-               console.log(err)
-            })
-      }
-   }
-
-   useEffect(() => {
-      const getOrdinaryRecords = async () => {
-         try {
-            const response = await axios.get('http://localhost:8000/OrdinaryUsers');
-            const ordinary = response.data;
-            setOrdinaryList(ordinary)
-         } catch (error) {
-            console.log(error);
-         }
-      };
-      getOrdinaryRecords();
-   }, [navigate]);
-
-   const deleteUser = async (userId) => {
+  useEffect(() => {
+    const fetchUsers = async () => {
       try {
-         const confirmed = window.confirm("Are you sure you want to delete the user?");
-         if (confirmed) {
-            await axios.delete(`http://localhost:8000/OrdinaryUsers/${userId}`);
-            setOrdinaryList(ordinaryList.filter((user) => user._id !== userId));
-         }
-      } catch (error) {
-         console.log(error);
+        const res = await axios.get('http://localhost:8000/OrdinaryUsers');
+        setUsers(res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch users:', err);
       }
-   }
+    };
+    fetchUsers();
+  }, [navigate]);
 
-   const handleToggle = (complaintId) => {
-      setToggle((prevState) => ({
-         ...prevState,
-         [complaintId]: !prevState[complaintId],
-      }));
-   };
+  const handleToggle = (user) => {
+    setExpandedUser((prev) => (prev === user._id ? null : user._id));
+    setFormDataMap((prev) => ({
+      ...prev,
+      [user._id]: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
+    }));
+  };
 
-   return (
-      <>
-         <div className="body">
+  const handleInputChange = (userId, e) => {
+    const { name, value } = e.target;
+    setFormDataMap((prev) => ({
+      ...prev,
+      [userId]: { ...prev[userId], [name]: value },
+    }));
+  };
 
-            <Container>
-               <Table striped bordered hover>
-                  <thead>
-                     <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Action</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     {ordinaryList.length > 0 ? (
-                        ordinaryList.map((user) => {
-                           const open = toggle[user._id] || false;
+  const handleSubmit = async (userId) => {
+    const userData = formDataMap[userId];
+    if (!userData.name && !userData.email && !userData.phone) {
+      return alert('Please fill in at least one field.');
+    }
+    if (!window.confirm('Are you sure you want to update this user?')) return;
 
-                           return (
-                              <tr key={user._id}>
-                                 <td>{user.name}</td>
-                                 <td>{user.email}</td>
-                                 <td>{user.phone}</td>
-                                 <td><Button onClick={() => handleToggle(user._id)}
-                                    aria-controls={`collapse-${user._id}`}
-                                    aria-expanded={open}
-                                    className='mx-2'
-                                    variant="outline-warning">
-                                    Update
-                                 </Button>
-                                    <Collapse in={open}>
-                                       <Form onSubmit={() => handleSubmit(user._id)} className='p-5'>
-                                          <Form.Group className="mb-3" controlId="formBasic">
-                                             <Form.Label>Full Name </Form.Label>
-                                             <Form.Control name='name' value={updateUser.name} onChange={handleChange} type="text" placeholder="Enter name" />
-                                          </Form.Group>
-                                          <Form.Group className="mb-3" controlId="formBasicEmail">
-                                             <Form.Label>Email address</Form.Label>
-                                             <Form.Control name='email' value={updateUser.email} onChange={handleChange} type="email" placeholder="Enter email" />
-                                          </Form.Group>
+    try {
+      await axios.put(`http://localhost:8000/user/${userId}`, userData);
+      alert('✅ User updated successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Failed to update user.');
+    }
+  };
 
-                                          <Form.Group className="mb-3" controlId="formBasicTel">
-                                             <Form.Label>Phone</Form.Label>
-                                             <Form.Control name='phone' value={updateUser.phone} onChange={handleChange} type="tel" placeholder="Enter Phone no." />
-                                          </Form.Group>
+  const deleteUser = async (userId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this user?');
+    if (!confirmed) return;
 
-                                          <Button size='sm' variant="outline-success" type="submit">
-                                             Submit
-                                          </Button>
-                                       </Form>
-                                    </Collapse>
-                                    <Button onClick={() => deleteUser(user._id)} className='mx-2' variant="outline-danger">Delete</Button></td>
-                              </tr>
-                           )
-                        })
-                     ) : (
-                        <Alert variant="info">
-                           <Alert.Heading>No Users to show</Alert.Heading>
-                        </Alert>
-                     )}
-                  </tbody>
-               </Table>
-            </Container>
-         </div>
-            <Footer />
-      </>
-   )
-}
-export default UserInfo
+    try {
+      await axios.delete(`http://localhost:8000/OrdinaryUsers/${userId}`);
+      setUsers((prev) => prev.filter((user) => user._id !== userId));
+      alert('🗑️ User deleted successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Failed to delete user.');
+    }
+  };
+
+  return (
+    <>
+      <div className="body">
+        <Container className="my-4">
+          <h3 className="mb-4">👥 User Management</h3>
+          {users.length === 0 ? (
+            <Alert variant="info">No users to display.</Alert>
+          ) : (
+            <Table striped bordered hover responsive>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <React.Fragment key={user._id}>
+                    <tr>
+                      <td>{user.name}</td>
+                      <td>{user.email}</td>
+                      <td>{user.phone}</td>
+                      <td>
+                        <Button
+                          variant="outline-warning"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleToggle(user)}
+                        >
+                          ✏️ Update
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => deleteUser(user._id)}
+                        >
+                          🗑️ Delete
+                        </Button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="4">
+                        <Collapse in={expandedUser === user._id}>
+                          <div>
+                            <Form
+                              className="p-3 border rounded bg-light"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                handleSubmit(user._id);
+                              }}
+                            >
+                              <Form.Group className="mb-3">
+                                <Form.Label>Full Name</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  name="name"
+                                  value={formDataMap[user._id]?.name || ''}
+                                  onChange={(e) => handleInputChange(user._id, e)}
+                                  placeholder="Enter name"
+                                />
+                              </Form.Group>
+                              <Form.Group className="mb-3">
+                                <Form.Label>Email</Form.Label>
+                                <Form.Control
+                                  type="email"
+                                  name="email"
+                                  value={formDataMap[user._id]?.email || ''}
+                                  onChange={(e) => handleInputChange(user._id, e)}
+                                  placeholder="Enter email"
+                                />
+                              </Form.Group>
+                              <Form.Group className="mb-3">
+                                <Form.Label>Phone</Form.Label>
+                                <Form.Control
+                                  type="tel"
+                                  name="phone"
+                                  value={formDataMap[user._id]?.phone || ''}
+                                  onChange={(e) => handleInputChange(user._id, e)}
+                                  placeholder="Enter phone number"
+                                />
+                              </Form.Group>
+                              <Button type="submit" variant="success" size="sm">
+                                💾 Save Changes
+                              </Button>
+                            </Form>
+                          </div>
+                        </Collapse>
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Container>
+      </div>
+      <Footer />
+    </>
+  );
+};
+
+export default UserInfo;

@@ -1,145 +1,175 @@
 import React, { useEffect, useState } from 'react';
-import Button from 'react-bootstrap/Button';
-import { useNavigate } from 'react-router-dom';
-import Table from 'react-bootstrap/Table';
-import Alert from 'react-bootstrap/Alert';
-import { Container } from 'react-bootstrap';
-import Collapse from 'react-bootstrap/Collapse';
-import Form from 'react-bootstrap/Form';
-import Footer from '../common/FooterC'
+import {
+  Button,
+  Container,
+  Table,
+  Alert,
+  Collapse,
+  Form,
+} from 'react-bootstrap';
 import axios from 'axios';
+import Footer from '../common/FooterC';
 
 const AgentInfo = () => {
-   const navigate = useNavigate();
-   const [ordinaryList, setOrdinaryList] = useState([]);
-   const [toggle, setToggle] = useState({})
-   const [updateAgent, setUpdateAgent] = useState({
-      name: '',
-      email: '',
-      phone: '',
-   })
+  const [agents, setAgents] = useState([]);
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [formDataMap, setFormDataMap] = useState({});
 
-   const handleChange = (e) => {
-      setUpdateAgent({ ...updateAgent, [e.target.name]: e.target.value })
-   }
-
-   const handleSubmit = async (user_id) => {
-      if (updateAgent === "") {
-         alert("atleast 1 fields need to be fill")
-      }
-      else {
-         window.confirm("Are you sure you want to update the agent?");
-         axios.put(`http://localhost:8000/user/${user_id}`, updateAgent)
-            .then((res) => {
-               alert(`Agent updated successfully`)
-               JSON.stringify(res.data)
-            })
-            .catch((err) => {
-               console.log(err)
-            })
-      }
-   }
-
-   useEffect(() => {
-      const getOrdinaryRecords = async () => {
-         try {
-            const response = await axios.get('http://localhost:8000/agentUsers');
-            const ordinary = response.data;
-            setOrdinaryList(ordinary)
-         } catch (error) {
-            console.log(error);
-         }
-      };
-      getOrdinaryRecords();
-   }, [navigate]);
-
-   const deleteUser = async (userId) => {
+  useEffect(() => {
+    const fetchAgents = async () => {
       try {
-         const confirmed = window.confirm("Are you sure you want to delete the user?");
-         if (confirmed) {
-            await axios.delete(`http://localhost:8000/OrdinaryUsers/${userId}`);
-            setOrdinaryList(ordinaryList.filter((user) => user._id !== userId));
-         }
+        const response = await axios.get('http://localhost:8000/agentUsers');
+        setAgents(response.data);
       } catch (error) {
-         console.log(error);
+        console.error('Error fetching agents:', error);
       }
-   }
+    };
+    fetchAgents();
+  }, []);
 
-   const handleToggle = (complaintId) => {
-      setToggle((prevState) => ({
-         ...prevState,
-         [complaintId]: !prevState[complaintId],
-      }));
-   };
+  const handleToggle = (id, currentData) => {
+    setExpandedRow((prev) => (prev === id ? null : id));
+    setFormDataMap((prev) => ({
+      ...prev,
+      [id]: { ...currentData }, // Initialize form data with current values
+    }));
+  };
 
+  const handleFormChange = (id, e) => {
+    const { name, value } = e.target;
+    setFormDataMap((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], [name]: value },
+    }));
+  };
 
-   return (
-      <>
-         <div className="body">
+  const handleSubmit = async (id) => {
+    const data = formDataMap[id];
+    if (!data.name && !data.email && !data.phone) {
+      alert('Please fill in at least one field before updating.');
+      return;
+    }
+    try {
+      await axios.put(`http://localhost:8000/user/${id}`, data);
+      alert('✅ Agent updated successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Update failed. Please try again.');
+    }
+  };
 
-            <Container>
-               <Table striped bordered hover>
-                  <thead>
-                     <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Action</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     {ordinaryList.length > 0 ? (
-                        ordinaryList.map((agent) => {
-                           const open = toggle[agent._id] || false;
+  const handleDelete = async (id) => {
+    const confirm = window.confirm('Are you sure you want to delete this agent?');
+    if (!confirm) return;
 
-                           return (
-                              <tr key={agent._id}>
-                                 <td>{agent.name}</td>
-                                 <td>{agent.email}</td>
-                                 <td>{agent.phone}</td>
-                                 <td><Button onClick={() => handleToggle(agent._id)}
-                                    aria-controls={`collapse-${agent._id}`}
-                                    aria-expanded={open}
-                                    className='mx-2'
-                                    variant="outline-warning">
-                                    Update
-                                 </Button>
-                                    <Collapse in={open}>
-                                       <Form onSubmit={() => handleSubmit(agent._id)} className='p-5'>
-                                          <Form.Group className="mb-3" controlId="formBasic">
-                                             <Form.Label>Full Name </Form.Label>
-                                             <Form.Control type="text" name='name' value={updateAgent.name} onChange={handleChange} placeholder="Enter name" />
-                                          </Form.Group>
-                                          <Form.Group className="mb-3" value controlId="formBasicEmail">
-                                             <Form.Label>Email address</Form.Label>
-                                             <Form.Control type="email" name='email' value={updateAgent.email} onChange={handleChange} placeholder="Enter email" />
-                                          </Form.Group>
+    try {
+      await axios.delete(`http://localhost:8000/OrdinaryUsers/${id}`);
+      setAgents((prev) => prev.filter((agent) => agent._id !== id));
+      alert('🗑️ Agent deleted.');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Failed to delete agent.');
+    }
+  };
 
-                                          <Form.Group className="mb-3" value controlId="formBasicTel">
-                                             <Form.Label>Phone</Form.Label>
-                                             <Form.Control type="tel" name='phone' value={updateAgent.phone} onChange={handleChange} placeholder="Enter Phone no." />
-                                          </Form.Group>
+  return (
+    <>
+      <div className="body">
+        <Container className="my-4">
+          <h3 className="mb-4">🧑‍💼 Agent Management</h3>
+          {agents.length === 0 ? (
+            <Alert variant="info">No agents to display.</Alert>
+          ) : (
+            <Table striped bordered hover responsive>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agents.map((agent) => (
+                  <React.Fragment key={agent._id}>
+                    <tr>
+                      <td>{agent.name}</td>
+                      <td>{agent.email}</td>
+                      <td>{agent.phone}</td>
+                      <td>
+                        <Button
+                          variant="outline-warning"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleToggle(agent._id, agent)}
+                        >
+                          ✏️ Update
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleDelete(agent._id)}
+                        >
+                          🗑️ Delete
+                        </Button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="4">
+                        <Collapse in={expandedRow === agent._id}>
+                          <div>
+                            <Form
+                              className="p-3 border rounded bg-light"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                handleSubmit(agent._id);
+                              }}
+                            >
+                              <Form.Group className="mb-3">
+                                <Form.Label>Full Name</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  name="name"
+                                  value={formDataMap[agent._id]?.name || ''}
+                                  onChange={(e) => handleFormChange(agent._id, e)}
+                                />
+                              </Form.Group>
+                              <Form.Group className="mb-3">
+                                <Form.Label>Email</Form.Label>
+                                <Form.Control
+                                  type="email"
+                                  name="email"
+                                  value={formDataMap[agent._id]?.email || ''}
+                                  onChange={(e) => handleFormChange(agent._id, e)}
+                                />
+                              </Form.Group>
+                              <Form.Group className="mb-3">
+                                <Form.Label>Phone</Form.Label>
+                                <Form.Control
+                                  type="tel"
+                                  name="phone"
+                                  value={formDataMap[agent._id]?.phone || ''}
+                                  onChange={(e) => handleFormChange(agent._id, e)}
+                                />
+                              </Form.Group>
+                              <Button type="submit" variant="success" size="sm">
+                                💾 Save Changes
+                              </Button>
+                            </Form>
+                          </div>
+                        </Collapse>
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Container>
+      </div>
+      <Footer />
+    </>
+  );
+};
 
-                                          <Button size='sm' variant="outline-success" type="submit">
-                                             Submit
-                                          </Button>
-                                       </Form>
-                                    </Collapse>
-                                    <Button onClick={() => deleteUser(agent._id)} className='mx-2' variant="outline-danger">Delete</Button></td>
-                              </tr>
-                           )
-                        })
-                     ) : (
-                        <Alert variant="info">
-                           <Alert.Heading>No Agents to show</Alert.Heading>
-                        </Alert>
-                     )}
-                  </tbody>
-               </Table>
-            </Container>
-         </div>
-         <Footer />
-      </>
-   )
-}
-export default AgentInfo
+export default AgentInfo;

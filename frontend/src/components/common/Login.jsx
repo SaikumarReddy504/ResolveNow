@@ -1,120 +1,121 @@
-import axios from 'axios';
 import React, { useState } from 'react';
-import {Link, useNavigate } from 'react-router-dom';
-import Container from 'react-bootstrap/Container';
-import Navbar from 'react-bootstrap/Navbar';
-import Footer from './FooterC'
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Container, Navbar, Button } from 'react-bootstrap';
+import Footer from './FooterC';
+import Logo from '../../Images/logo.png';
+import { Nav } from 'react-bootstrap';
+
 
 const Login = () => {
-   const navigate = useNavigate();
-   const [user, setUser] = useState({
-      email: "",
-      password: ""
-   });
+  const navigate = useNavigate();
+  const [user, setUser] = useState({ email: '', password: '' });
 
-   const handleChange = (e) => {
-      const { name, value } = e.target;
-      setUser({ ...user, [name]: value });
-   };
+  const handleChange = ({ target: { name, value } }) => {
+    setUser((prev) => ({ ...prev, [name]: value }));
+  };
 
-   const handleSubmit = async (e) => {
-      e.preventDefault();
-      await axios.post("http://localhost:8000/Login", user)
-         .then((res) => {
-            alert("Successfully logged in");
-            localStorage.setItem("user", JSON.stringify(res.data));
-            const isLoggedIn = JSON.parse(localStorage.getItem("user"));
-            const { userType } = isLoggedIn
-            switch (userType) {
-               case "Admin":
-                  navigate("/AdminHome")
-                  break;
-               case "Ordinary":
-                  navigate("/HomePage")
-                  break;
-               case "Agent":
-                  navigate("/AgentHome")
-                  break;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const { data } = await axios.post('http://localhost:8000/Login', user);
+      localStorage.setItem('user', JSON.stringify(data));
+      alert('✅ Successfully logged in!');
+      switch (data.userType) {
+        case 'Admin':
+          navigate('/AdminHome');
+          break;
+        case 'Ordinary':
+          navigate('/HomePage');
+          break;
+        case 'Agent':
+          navigate('/AgentHome');
+          break;
+        default:
+          navigate('/Login');
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        alert('⚠️ Invalid credentials. Please try again.');
+      } else {
+        alert('❌ Login failed. Please check your connection.');
+      }
+    }
+  };
 
-               default:
-                  navigate("/Login")
-                  break;
-            }
-         })
-         .catch((err) => {
-            if (err.response && err.response.status === 401) {
-               alert("User doesn`t exists");
-            }
-            navigate("/Login");
-         });
-   };
+  return (
+    <>
+      {/* Navbar */}
+        <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
+          <Container>
+            <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
+              <img src={Logo} alt="Logo" width="35" height="35" className="me-2" />
+              <span className="fw-bold brand-color fs-4">ResolveNow</span>
 
-   return (
-      <>
-         <Navbar bg="dark" variant="dark">
-            <Container>
-               <Navbar.Brand>ComplaintCare </Navbar.Brand>
-               <ul className="navbar-nav">
-                  <li className="nav-item mb-2">
-                     <Link to={'/'}
-                        className={`nav-link text-light `}
-                     >
-                        Home
-                     </Link>
-                  </li>
-                  <li className="nav-item mb-2">
-                     <Link
-                     to={'/signup'}
-                        className={`nav-link text-light `}
-                     >
-                        SignUp
-                     </Link>
-                  </li>
-                  <li className="nav-item mb-2">
-                     <Link
-                     to={'/login'}
-                        className={`nav-link text-light `}
-                     >
-                        Login
-                     </Link>
-                  </li>
-               </ul>
-            </Container>
-         </Navbar>
-         <section className="vh-100 gradient-custom">
-            <div className="container py-5 h-100">
-               <div className="row d-flex justify-content-center align-items-center h-100">
-                  <div className="col-12 col-md-8 col-lg-6 col-xl-5">
-                     <div className="card bg-dark text-white">
-                        <div className="card-body p-5 text-center">
-                           <div className="mb-md-5 mt-md-4 pb-5">
-                              <h2 className="fw-bold mb-4">Login For Registering the Complaint</h2>
-                              <p className="text-white-50 mb-5">Please enter your Credentials!</p>
-                              <form onSubmit={handleSubmit}>
-                                 <div className="form-outline form-white mb-4">
-                                    <input type="email" name="email" value={user.email} onChange={handleChange} className="form-control form-control-lg" required />
-                                    <label className="form-label" htmlFor="email">Email</label>
-                                 </div>
-                                 <div className="form-outline form-white mb-4">
-                                    <input type="password" name="password" value={user.password} onChange={handleChange} className="form-control form-control-lg" autoComplete="off" required />
-                                    <label className="form-label" htmlFor="password">Password</label>
-                                 </div>
+            </Navbar.Brand>
+            <Nav className="ms-auto d-flex flex-row gap-3">
+  <Nav.Link as={Link} to="/" className="text-light">Home</Nav.Link>
+  <Nav.Link as={Link} to="/signup" className="text-light">Sign Up</Nav.Link>
+  <Nav.Link as={Link} to="/login" className="text-light">Login</Nav.Link>
+</Nav>
 
-                                 <button className="btn btn-outline-light btn-lg px-5" type="submit">Login</button>
-                              </form>
-                           </div>
-                           <div>
-                              <p className="mb-0">Don't have an account? <Link to="/SignUp">SignUp</Link></p>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
+        </Container>
+      </Navbar>
+
+      {/* Login Section */}
+      <section className="vh-100 gradient-custom d-flex align-items-center justify-content-center bg-light">
+        <Container className="py-5">
+          <div className="row justify-content-center">
+            <div className="col-12 col-md-8 col-lg-6 col-xl-5">
+              <div className="card bg-dark text-white shadow-lg rounded">
+                <div className="card-body p-5 text-center">
+                  <h3 className="fw-bold mb-4">Login to File a Complaint</h3>
+                  <p className="text-white-50 mb-4">Enter your email and password below.</p>
+
+                  <form onSubmit={handleSubmit}>
+                    <div className="form-outline form-white mb-4 text-start">
+                      <label className="form-label" htmlFor="email">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        className="form-control form-control-lg"
+                        value={user.email}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-outline form-white mb-4 text-start">
+                      <label className="form-label" htmlFor="password">Password</label>
+                      <input
+                        type="password"
+                        name="password"
+                        className="form-control form-control-lg"
+                        value={user.password}
+                        onChange={handleChange}
+                        autoComplete="off"
+                        required
+                      />
+                    </div>
+
+                    <Button variant="light" type="submit" className="btn-lg w-100">
+                      🔓 Login
+                    </Button>
+                  </form>
+
+                  <p className="mt-4 mb-0">
+                    Don’t have an account?{' '}
+                    <Link to="/signup" className="text-warning fw-bold">Sign Up</Link>
+                  </p>
+                </div>
+              </div>
             </div>
-         </section>
-         <Footer/>
-      </>
-   );
+          </div>
+        </Container>
+      </section>
+
+      <Footer />
+    </>
+  );
 };
 
 export default Login;

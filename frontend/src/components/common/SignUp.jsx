@@ -1,134 +1,162 @@
-import axios from 'axios'
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import Dropdown from 'react-bootstrap/Dropdown';
-import Container from 'react-bootstrap/Container';
-import Navbar from 'react-bootstrap/Navbar';
-import Footer from './FooterC'
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { Nav } from 'react-bootstrap';
+
+import {
+  Container,
+  Navbar,
+  Dropdown,
+  Button,
+  Form,
+  Card,
+  Row,
+  Col
+} from 'react-bootstrap';
+import Footer from './FooterC';
+import Logo from '../../Images/logo.png';
+
 const SignUp = () => {
-   const [title, setTitle] = useState("Select User")
-   const [user, setUser] = useState({
-      name: "",
-      email: "",
-      password: "",
-      phone: "",
-      userType: ""
-   })
-   const handleChange = (e) => {
-      setUser({ ...user, [e.target.name]: e.target.value })
-   }
+  const [user, setUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    userType: ''
+  });
 
-   const handleTitle = (select) => {
-      setTitle(select)
-      setUser({ ...user, userType: select });
-   }
+  const handleChange = ({ target: { name, value } }) => {
+    setUser((prev) => ({ ...prev, [name]: value }));
+  };
 
-   const handleSubmit = async (e) => {
-      e.preventDefault()
-      const updatedUser = { ...user, userType: title };
-      axios.post("http://localhost:8000/SignUp", updatedUser)
-         .then((res) => {
-            alert("record submitted")
-            JSON.stringify(res.data.user)
-         })
-         .catch((err) => {
-            console.log(err)
-         })
-      setUser({
-         name: "",
-         email: "",
-         password: "",
-         phone: "",
-         userType: ""
-      })
-   }
-   return (
-      <>
-         <Navbar bg="dark" variant="dark">
-            <Container>
-               <Navbar.Brand>ComplaintCare </Navbar.Brand>
-               <ul className="navbar-nav">
-                  <li className="nav-item mb-2">
-                     <Link to={'/'}
-                        className={`nav-link text-light `}
-                     >
-                        Home
-                     </Link>
-                  </li>
-                  <li className="nav-item mb-2">
-                     <Link
-                     to={'/signup'}
-                        className={`nav-link text-light `}
-                     >
-                        SignUp
-                     </Link>
-                  </li>
-                  <li className="nav-item mb-2">
-                     <Link
-                     to={'/login'}
-                        className={`nav-link text-light `}
-                     >
-                        Login
-                     </Link>
-                  </li>
-               </ul>
-            </Container>
-         </Navbar>
-         <section className="gradient-custom">
-            <div className="container">
-               <div className="row d-flex justify-content-center align-items-center h-100">
-                  <div className="col-12 col-md-8 col-lg-6 col-xl-5">
-                     <div className="card bg-dark text-white">
-                        <div className="card-body p-5 text-center">
-                           <div className="mb-md-5 mt-md-4 pb-5">
-                              <h2 className="fw-bold mb-4 ">SignUp For Registering the Complaint</h2>
-                              <p className="text-white-50 mb-4">Please enter your Details</p>
-                              <form onSubmit={handleSubmit}>
-                                 <div className="form-outline form-white mb-4">
-                                    <input type="name" name="name" value={user.name} onChange={handleChange} className="form-control form-control-lg" required />
-                                    <label className="form-label" htmlFor="name">Full Name</label>
-                                 </div>
-                                 <div className="form-outline form-white mb-4">
-                                    <input type="email" name="email" value={user.email} onChange={handleChange} className="form-control form-control-lg" required />
-                                    <label className="form-label" htmlFor="email">Email</label>
-                                 </div>
-                                 <div className="form-outline form-white mb-4">
-                                    <input type="password" name="password" value={user.password} onChange={handleChange} className="form-control form-control-lg" required />
-                                    <label className="form-label" htmlFor="password">Password</label>
-                                 </div>
-                                 <div className="form-outline form-white mb-4">
-                                    <input type="phone" name="phone" value={user.phone} onChange={handleChange} className="form-control form-control-lg" required />
-                                    <label className="form-label" htmlFor="mobile">Mobile No.</label>
-                                 </div>
-                                 <div className="form-outline form-white mb-4">
-                                    <Dropdown>
-                                       <Dropdown.Toggle variant="secondary" id="dropdown-basic">
-                                          {title}
-                                       </Dropdown.Toggle>
+  const handleUserTypeSelect = (type) => {
+    setUser((prev) => ({ ...prev, userType: type }));
+  };
 
-                                       <Dropdown.Menu>
-                                          <Dropdown.Item onClick={() => handleTitle("Ordinary")}>Ordinary</Dropdown.Item>
-                                          <Dropdown.Item onClick={() => handleTitle("Admin")}>Admin</Dropdown.Item>
-                                          <Dropdown.Item onClick={() => handleTitle("Agent")}>Agent</Dropdown.Item>
-                                       </Dropdown.Menu>
-                                    </Dropdown>
-                                    <label className="form-label" htmlFor="mobile">Select User Type</label>
-                                 </div>
-                                 <button className="btn btn-outline-light btn-lg px-5 mt-3" type="submit">Register</button>
-                              </form>
-                           </div>
-                           <div>
-                              <p className="mb-0">Had an account?<Link to={"/Login"}>Login</Link></p>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </section>
-         <Footer/>
-      </>
-   )
-}
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!user.userType) {
+      return alert('Please select a user type.');
+    }
 
-export default SignUp
+    try {
+      await axios.post('http://localhost:8000/SignUp', user);
+      alert('✅ Account created successfully!');
+      setUser({ name: '', email: '', password: '', phone: '', userType: '' });
+    } catch (err) {
+      console.error('❌ Registration error:', err);
+      alert('Failed to register. Try again.');
+    }
+  };
+
+  return (
+    <>
+      {/* Navbar */}
+      <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
+        <Container>
+          <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
+            <img src={Logo} alt="Logo" width="35" height="35" className="me-2" />
+            <span className="fw-bold brand-color fs-4">ResolveNow</span>
+
+          </Navbar.Brand>
+          <Nav className="ms-auto d-flex flex-row gap-3">
+            <Nav.Link as={Link} to="/" className="text-light">Home</Nav.Link>
+            <Nav.Link as={Link} to="/signup" className="text-light">Sign Up</Nav.Link>
+            <Nav.Link as={Link} to="/login" className="text-light">Login</Nav.Link>
+          </Nav>
+        </Container>
+      </Navbar>
+
+      {/* Signup Form Section */}
+      <section className="bg-light py-5">
+        <Container>
+          <Row className="justify-content-center">
+            <Col md={8} lg={6}>
+              <Card className="bg-dark text-white shadow-lg">
+                <Card.Body className="p-5 text-center">
+                  <h2 className="fw-bold mb-4">🚀 Sign Up to File Complaints</h2>
+                  <p className="text-white-50 mb-4">Fill in your details below</p>
+                  <Form onSubmit={handleSubmit}>
+                    <Form.Group className="mb-3 text-start">
+                      <Form.Label>Full Name</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="name"
+                        value={user.name}
+                        onChange={handleChange}
+                        placeholder="Enter your name"
+                        required
+                      />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3 text-start">
+                      <Form.Label>Email</Form.Label>
+                      <Form.Control
+                        type="email"
+                        name="email"
+                        value={user.email}
+                        onChange={handleChange}
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3 text-start">
+                      <Form.Label>Password</Form.Label>
+                      <Form.Control
+                        type="password"
+                        name="password"
+                        value={user.password}
+                        onChange={handleChange}
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3 text-start">
+                      <Form.Label>Phone</Form.Label>
+                      <Form.Control
+                        type="tel"
+                        name="phone"
+                        value={user.phone}
+                        onChange={handleChange}
+                        placeholder="Enter your phone number"
+                        required
+                      />
+                    </Form.Group>
+
+                    <Form.Group className="mb-4 text-start">
+                      <Form.Label>User Type</Form.Label>
+                      <Dropdown onSelect={handleUserTypeSelect}>
+                        <Dropdown.Toggle variant="secondary" id="dropdown-basic" className="w-100 text-start">
+                          {user.userType || 'Select User Type'}
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item eventKey="Ordinary">Ordinary</Dropdown.Item>
+                          <Dropdown.Item eventKey="Agent">Agent</Dropdown.Item>
+                          <Dropdown.Item eventKey="Admin">Admin</Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Form.Group>
+
+                    <Button variant="light" type="submit" className="btn-lg w-100 mt-3">
+                      ✅ Register
+                    </Button>
+                  </Form>
+                  <p className="mt-4">
+                    Already have an account?{' '}
+                    <Link to="/login" className="text-warning fw-bold">Login</Link>
+                  </p>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
+      </section>
+
+      <Footer />
+    </>
+  );
+};
+
+export default SignUp;

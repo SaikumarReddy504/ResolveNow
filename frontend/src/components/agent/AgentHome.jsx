@@ -1,145 +1,164 @@
-import React, { useState, useEffect } from 'react';
-import Button from 'react-bootstrap/Button';
-import Container from 'react-bootstrap/Container';
-import Nav from 'react-bootstrap/Nav';
-import Navbar from 'react-bootstrap/Navbar';
-import Card from 'react-bootstrap/Card';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import {
+  Button,
+  Container,
+  Nav,
+  Navbar,
+  Card,
+  Alert,
+  Collapse,
+  Spinner
+} from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Alert from 'react-bootstrap/Alert';
-import Collapse from 'react-bootstrap/Collapse';
 import ChatWindow from '../common/ChatWindow';
-import Footer from '../common/FooterC'
+import Footer from '../common/FooterC';
 
 const AgentHome = () => {
-   const style = {
-      marginTop: '66px',
-   }
+  const navigate = useNavigate();
+  const [userName, setUserName] = useState('');
+  const [complaints, setComplaints] = useState([]);
+  const [expandedChat, setExpandedChat] = useState({});
+  const [loading, setLoading] = useState(true);
 
-   const navigate = useNavigate();
-   const [userName, setUserName] = useState('');
-   const [toggle, setToggle] = useState({})
-   const [agentComplaintList, setAgentComplaintList] = useState([]);
-
-   useEffect(() => {
-      const getData = async () => {
-         try {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (user) {
-               const { _id, name } = user;
-               setUserName(name);
-               const response = await axios.get(`http://localhost:8000/allcomplaints/${_id}`);
-               const complaints = response.data;
-               setAgentComplaintList(complaints);
-            } else {
-               navigate('/');
-            }
-         } catch (error) {
-            console.log(error);
-         }
-      };
-
-      getData();
-   }, [navigate]);
-
-   const handleStatusChange = async (complaintId) => {
+  useEffect(() => {
+    const fetchComplaints = async () => {
       try {
-         await axios.put(`http://localhost:8000/complaint/${complaintId}`, { status: 'completed' });
-         setAgentComplaintList((prevComplaints) =>
-            prevComplaints.map((complaint) =>
-               complaint._doc.complaintId === complaintId ? { ...complaint, _doc: { ...complaint._doc, status: 'completed' } } : complaint
-            )
-         );
-      } catch (error) {
-         console.log(error);
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) return navigate('/');
+        setUserName(user.name);
+
+        const res = await axios.get(`http://localhost:8000/allcomplaints/${user._id}`);
+        setComplaints(res.data || []);
+      } catch (err) {
+        console.error('Error fetching complaints:', err);
+      } finally {
+        setLoading(false);
       }
-   };
+    };
 
-   const handleToggle = (complaintId) => {
-      setToggle((prevState) => ({
-         ...prevState,
-         [complaintId]: !prevState[complaintId],
-      }));
-   };
+    fetchComplaints();
+  }, [navigate]);
 
-   const LogOut = () => {
-      localStorage.removeItem('user');
-      navigate('/');
-   };
+  const toggleChat = (complaintId) => {
+    setExpandedChat((prev) => ({
+      ...prev,
+      [complaintId]: !prev[complaintId],
+    }));
+  };
 
-   return (
-      <>
-         <div className="body">
-            <Navbar className="text-white" bg="dark" expand="lg">
-               <Container fluid>
-                  <Navbar.Brand className="text-white">
-                     Hi Agent {userName}
-                  </Navbar.Brand>
-                  <Navbar.Toggle aria-controls="navbarScroll" />
-                  <Navbar.Collapse id="navbarScroll">
-                     <Nav className="text-white me-auto my-2 my-lg-0" style={{ maxHeight: '100px' }} navbarScroll>
-                        <NavLink style={{ textDecoration: 'none' }} className="text-white">
-                           View Complaints
-                        </NavLink>
-                     </Nav>
-                     <Button onClick={LogOut} variant="outline-danger">
-                        Log out
-                     </Button>
-                  </Navbar.Collapse>
-               </Container>
-            </Navbar>
-            <div className="container" style={{ display: 'flex', flexWrap: 'wrap', margin: '20px' }}>
-               {agentComplaintList && agentComplaintList.length > 0 ? (
-                  agentComplaintList.map((complaint, index) => {
-                     const open = toggle[complaint._doc.complaintId] || false;
-                     return (
-                        <Card key={index} style={{ width: '18rem', margin: '15px' }}>
-                           <Card.Body>
-                              <Card.Title><b>Name:</b> {complaint.name}</Card.Title>
-                              <Card.Text><b>Address:</b> {complaint.address}</Card.Text>
-                              <Card.Text><b>City:</b> {complaint.city}</Card.Text>
-                              <Card.Text><b>State:</b> {complaint.state}</Card.Text>
-                              <Card.Text><b>Pincode:</b> {complaint.pincode}</Card.Text>
-                              <Card.Text><b>Comment:</b> {complaint.comment}</Card.Text>
-                              <Card.Text><b>Status:</b> {complaint._doc.status}</Card.Text>
+  const markAsCompleted = async (complaintId) => {
+    try {
+      await axios.put(`http://localhost:8000/complaint/${complaintId}`, {
+        status: 'completed',
+      });
+      setComplaints((prev) =>
+        prev.map((item) =>
+          item._doc.complaintId === complaintId
+            ? { ...item, _doc: { ...item._doc, status: 'completed' } }
+            : item
+        )
+      );
+    } catch (err) {
+      console.error('Error updating status:', err);
+    }
+  };
 
-                              {complaint.status !== 'completed' && (
-                                 <Button onClick={() => handleStatusChange(complaint._doc.complaintId)} variant="primary">
-                                    Status Change
-                                 </Button>
-                              )}
-                              <Button onClick={() => handleToggle(complaint._doc.complaintId)}
-                                 aria-controls={`collapse-${complaint._doc.complaintId}`}
-                                 aria-expanded={!open} className='mx-3' variant="primary">
-                                 Message
-                              </Button>
-                              <div>
-                                 <Collapse in={!open} dimension="width">
-                                    <div id="example-collapse-text">
-                                       <Card body style={{ width: '250px', marginTop: '12px' }}>
-                                          <ChatWindow key={complaint._doc.complaintId} complaintId={complaint._doc.complaintId} name={userName} />
-                                       </Card>
-                                    </div>
-                                 </Collapse>
-                              </div>
+  const logout = () => {
+    localStorage.removeItem('user');
+    navigate('/');
+  };
 
-                           </Card.Body>
-                        </Card>
-                     );
-                  })
-               ) : (
-                  <Alert variant="info">
-                     <Alert.Heading>No complaints to show</Alert.Heading>
-                  </Alert>
-               )}
-            </div>
-         </div>
-         <Footer style={style}/>
-      </>
-   );
+  return (
+    <div className="body">
+      <Navbar bg="dark" variant="dark" expand="lg">
+        <Container fluid>
+          <Navbar.Brand>🛠️ Welcome Agent, {userName}</Navbar.Brand>
+          <Navbar.Toggle aria-controls="agent-navbar" />
+          <Navbar.Collapse id="agent-navbar">
+            <Nav className="me-auto">
+              <Nav.Link className="text-light">📋 View Complaints</Nav.Link>
+            </Nav>
+            <Button variant="outline-light" onClick={logout}>
+              🔒 Logout
+            </Button>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+
+      <Container className="my-4 d-flex flex-wrap justify-content-center gap-4">
+        {loading ? (
+          <div className="text-center my-5">
+            <Spinner animation="border" role="status" />
+            <p className="mt-2">Loading complaints...</p>
+          </div>
+        ) : complaints.length > 0 ? (
+          complaints.map(({ _doc, name, address, city, state, pincode, comment }, idx) => {
+            const isChatOpen = expandedChat[_doc.complaintId];
+            const isCompleted = _doc.status === 'completed';
+
+            return (
+              <Card key={idx} style={{ width: '20rem' }} className="shadow-sm">
+                <Card.Body>
+                  <Card.Title className="text-primary">{name}</Card.Title>
+                  <Card.Subtitle className="mb-2 text-muted">
+                    📍 {city}, {state}
+                  </Card.Subtitle>
+                  <Card.Text style={{ fontSize: '14px' }}>
+                    <strong>Address:</strong> {address}<br />
+                    <strong>Pincode:</strong> {pincode}<br />
+                    <strong>Comment:</strong> {comment}<br />
+                    <strong>Status:</strong>{' '}
+                    <span className={`badge ${isCompleted ? 'bg-success' : 'bg-warning text-dark'}`}>
+                      {isCompleted ? 'Completed' : 'Pending'}
+                    </span>
+                  </Card.Text>
+
+                  {!isCompleted && (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => markAsCompleted(_doc.complaintId)}
+                    >
+                      ✅ Mark as Completed
+                    </Button>
+                  )}
+                  <Button
+                    variant="info"
+                    size="sm"
+                    className="mx-2"
+                    onClick={() => toggleChat(_doc.complaintId)}
+                    aria-controls={`chat-${_doc.complaintId}`}
+                    aria-expanded={isChatOpen}
+                  >
+                    💬 Message
+                  </Button>
+
+                  <Collapse in={isChatOpen}>
+                    <div id={`chat-${_doc.complaintId}`} className="mt-3">
+                      <Card body className="bg-light">
+                        <ChatWindow
+                          complaintId={_doc.complaintId}
+                          name={userName}
+                        />
+                      </Card>
+                    </div>
+                  </Collapse>
+                </Card.Body>
+              </Card>
+            );
+          })
+        ) : (
+          <Alert variant="info" className="text-center w-100">
+            <Alert.Heading>🛑 No complaints assigned!</Alert.Heading>
+            <p>You currently have no tasks assigned.</p>
+          </Alert>
+        )}
+      </Container>
+
+      <Footer />
+    </div>
+  );
 };
 
 export default AgentHome;
-
-
-
